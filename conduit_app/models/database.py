@@ -1,12 +1,14 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+
+from sqlmodel import Field, SQLModel, create_engine
+from typing import Optional 
+from models.user import UserModel,ArticleModel,CommentModel
 
 
-URL_DATABASE = 'postgresql://postgres:postgres@localhost:5433/conduit_fast'
+URL_DATABASE = 'postgresql://postgres:postgres@localhost:5432/conduit'
 
-engine = create_engine(URL_DATABASE)
+engine = create_engine(f"{URL_DATABASE}", echo=True)
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-Base = declarative_base()
+def create_tables():
+    SQLModel.metadata.create_all(engine)
+

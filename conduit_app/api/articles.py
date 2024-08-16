@@ -22,32 +22,33 @@ async def articles(session: Session = Depends(get_session)):
 async def article(article_id: int, response:Response ,session: Session = Depends(get_session)):
     try:
         article = session.get(ArticleModel, article_id)
-        print(1)
         if article is None:
             response.status_code = 404
             return "Article not found"
-        print(2)
         return article
     except Exception as e:
-        print(3)
         raise HTTPException(status_code=500, detail=str(e))
+    
 
 @router.post("/articles/", tags=["articles"], response_model=ArticleModel)
 async def post_articles(
-    new_article: ArticleModel = Body(..., embed=True, alias="article"), session: Session = Depends(get_session)):
+    article: ArticleModel = Body(embed=True), 
+    session: Session = Depends(get_session)
+):
     try:
-        # Extract the actual article dictionary from the nested structure
-        print(new_article)
-        new_article = ArticleModel(**new_article)
-
+        print("chuaw vo loi dau")
+        print("Received article data:", article)
+        print(type(article))
+        # new_article = ArticleModel(article)
+        # print(new_article)
         # Add the new article to the session and commit
-        session.add(new_article)
+        session.add(article)
         session.commit()
-        session.refresh(new_article)
-
-        return new_article
+        session.refresh(article)
+        return article
     except Exception as e:
-        print(1)
+        print("Received article data:", article)
+        print('vo me day r')
         raise HTTPException(status_code=500, detail=str(e))
 
 

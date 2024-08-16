@@ -23,17 +23,12 @@ class ArticleModel(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     slug: str
-    # NOTE: slug is not a primary field because it could change and this would imply to
-    # change all the references
     title: str
     description: str
     body: str
-    # tag_list: List[str] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     author: int | None = Field(default=None, foreign_key="users.id")
-
-    # favorited_user_ids: Tuple[ObjectId, ...] = ()
     comments: int | None = Field(default=None, foreign_key="users.id")
 
 

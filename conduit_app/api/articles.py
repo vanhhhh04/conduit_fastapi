@@ -28,16 +28,14 @@ async def article(article_id: int, response:Response ,session: Session = Depends
         return article
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 
 @router.post("/articles/", tags=["articles"], response_model=ArticleModel)
 async def post_articles(
-    article: ArticleModel = Body(embed=True), 
+    article: ArticleModel = Body(embed=True),
     session: Session = Depends(get_session)
 ):
     try:
-        print("chuaw vo loi dau")
-        print("Received article data:", article)
         print(type(article))
         # new_article = ArticleModel(article)
         # print(new_article)
@@ -53,13 +51,18 @@ async def post_articles(
 
 
 @router.put("/article/{article_id}", tags=["articles"], response_model=Union[ArticleModel, str])
-async def put_article(article_id: int, updated_article:ArticleModel, response:Response ,session: Session = Depends(get_session)):
+async def put_article(
+    article_id: int,
+    response:Response ,
+    article: ArticleModel = Body(embed=True),
+    session: Session = Depends(get_session)
+):
     article = session.get(ArticleModel, article_id)
 
     if article is None:
         response.status_code = 404
         return "Article not found"
-    article_dict = updated_article.dict(exclude_unset=True)
+    article_dict = article.dict(exclude_unset=True)
     for key,value in article_dict.items():
         if key != 'id':
             setattr(article, key, value)

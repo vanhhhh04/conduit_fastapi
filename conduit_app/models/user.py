@@ -11,11 +11,12 @@ class UserModel(SQLModel, table=True):
     __tablename__ = "users"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    username: str
+    username: Optional[str] = Field(default=None)
     email: str
     hashed_password: str
     bio: Optional[str] = None
     image: Optional[str] = None
+
     # following_ids: int | None = Field(default=None, foreign_key="users.id")
 
 class ArticleModel(SQLModel, table=True):
@@ -36,15 +37,15 @@ class CommentModel(SQLModel, table=True):
     __tablename__ ="comments"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    body: str 
+    body: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    author_id: int | None = Field(default=None, foreign_key="users.id") 
+    author_id: int | None = Field(default=None, foreign_key="users.id")
 
 # class CommentModel(SQLModel, table=True):
 #     __tablename__ ="comments"
 #     id: Optional[int] = Field(default=None, primary_key=True)
-#     body: str 
+#     body: str
 #     created_at: datetime = Field(default_factory=datetime.utcnow)
 #     updated_at: datetime = Field(default_factory=datetime.utcnow)
-#     author_id: int | None = Field(default=None, foreign_key="users.id") 
+#     author_id: int | None = Field(default=None, foreign_key="users.id")

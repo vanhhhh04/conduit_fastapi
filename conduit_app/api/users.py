@@ -12,25 +12,25 @@ from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
 from jose import JWTError
 from starlette.requests import Request
-
+from fastapi.security.utils import get_authorization_scheme_param
+from starlette.status import HTTP_401_UNAUTHORIZED
 
 router = APIRouter()
 
-class CustomOAuth2(OAuth2):
-    def __init__(self, tokenUrl: str):
-        self.tokenUrl = tokenUrl
-
-    def __call__(self, request: Request) -> str:
-        authorization: Optional[str] = request.headers.get("Authorization")
-
-        if authorization is None:
-            raise HTTPException(status_code=401, detail="Not authenticated")
-
-        if not authorization.startswith("Token "):
-            raise HTTPException(status_code=401, detail="Invalid authentication scheme")
-
-        token = authorization[len("Token "):]
-        return token
+class CustomizeOAuth2PasswordBearer(OAuth2PasswordBearer):
+    async def __call__(self, request: Request) -> Optional[str]:
+        authorization = request.headers.get("Authorization")
+        scheme, param = get_authorization_scheme_param(authorization)
+        if not authorization or scheme.lower() != "token":
+            if self.auto_error:
+                raise HTTPException(
+                    status_code=HTTP_401_UNAUTHORIZED,
+                    detail="Not authenticated",
+                    headers={"WWW-Authenticate": "token"},
+                )
+            else:
+                return None
+        return param
 
 
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
@@ -39,7 +39,7 @@ ACCESS_TOKEN_EXPIRE_HOURS = 30
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = CustomOAuth2(tokenUrl="token")
+oauth2_scheme = CustomizeOAuth2PasswordBearer(tokenUrl="token")
 db_dependency = Annotated[Session, Depends(get_session)]
 
 class TokenData(BaseModel):
@@ -64,6 +64,7 @@ class UserResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
 
 class UserInDB(UserCreate):
     hashed_password: str
@@ -100,7 +101,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-@router.post("/register")
+@router.post("/users")  # Route without the "api" prefix
 def register(user: UserLogin, db: db_dependency):
     try:
         # Check if the email already exists
@@ -129,7 +130,7 @@ def register(user: UserLogin, db: db_dependency):
 
 
 
-@router.post("/token", response_model=Token)
+@router.post("/users/login")
 async def login_for_access_token(
     user_request: UserLogin,
     db: Session = Depends(get_session)
@@ -145,7 +146,13 @@ async def login_for_access_token(
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    return Token(access_token=access_token, token_type="Token")
+    return {"user":
+            {"email": user.email,
+             "token": access_token,
+             "username": user.username,
+             "bio": user.bio,
+             "image": user.image}}
+
 
 def get_current_user(db: db_dependency, token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
@@ -167,9 +174,17 @@ def get_current_user(db: db_dependency, token: str = Depends(oauth2_scheme)):
     return user
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
-@router.get("/users/me/", response_model=UserResponse)
+@router.get("/user")
 def read_users_me(current_user: user_dependency):
-    return current_user
+    return {
+  "profile": {
+    "username": current_user.username,
+    "bio": current_user.bio,
+    "image": current_user.image,
+    "following": None
+  }
+}
+
 
 
 class UserUpdate(BaseModel):
@@ -178,11 +193,13 @@ class UserUpdate(BaseModel):
     bio: Optional[str] = None
     image: Optional[str] = None
     password: Optional[str] = None
+
+
 class UserUpdate(BaseModel):
     user : UserUpdate
 
 
-@router.put("/user/")
+@router.put("/user")
 def update_user(
     current_user: user_dependency,
     user_request: UserUpdate,
@@ -204,21 +221,4 @@ def update_user(
     db.refresh(current_user)
 
     return {"message": "Update successful"}
-
-
-# {
-#   "user":{
-#     "email": "jake@jake.jake",
-#     "bio": "I like to skateboard",
-#     "image": "https://i.stack.imgur.com/xHWG8.jpg"
-#   }
-# }
-# {
-#   "profile": {
-#     "username": "jake",
-#     "bio": "I work at statefarm",
-#     "image": "https://api.realworld.io/images/smiley-cyrus.jpg",
-#     "following": false
-#   }
-# }
 

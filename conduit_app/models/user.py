@@ -1,12 +1,15 @@
 from sqlmodel import Field, Relationship, SQLModel,create_engine
 from pydantic import EmailStr
-from typing import Optional
+from typing import Optional,List
 
 from datetime import datetime
 
 URL_DATABASE = 'postgresql://postgres:postgres@localhost:5432/conduit'
 
 engine = create_engine(f"{URL_DATABASE}", echo=True)
+
+
+
 class UserModel(SQLModel, table=True):
     __tablename__ = "users"
 
@@ -17,7 +20,8 @@ class UserModel(SQLModel, table=True):
     bio: Optional[str] = None
     image: Optional[str] = None
 
-    # following_ids: int | None = Field(default=None, foreign_key="users.id")
+    # Define a one-to-many relationship with ArticleModel
+    articles: List["ArticleModel"] = Relationship(back_populates="author")
 
 class ArticleModel(SQLModel, table=True):
     __tablename__ = "articles"
@@ -29,9 +33,10 @@ class ArticleModel(SQLModel, table=True):
     body: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    author: int | None = Field(default=None, foreign_key="users.id")
-    comments: int | None = Field(default=None, foreign_key="users.id")
-
+    author_id: Optional[int] = Field(default=None, foreign_key="users.id")
+    # tag_list: Optional[List[str]] = Field(None, alias="tagList")
+    # Define a relationship to UserModel
+    author: Optional[UserModel] = Relationship(back_populates="articles")
 
 class CommentModel(SQLModel, table=True):
     __tablename__ ="comments"
@@ -42,10 +47,3 @@ class CommentModel(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     author_id: int | None = Field(default=None, foreign_key="users.id")
 
-# class CommentModel(SQLModel, table=True):
-#     __tablename__ ="comments"
-#     id: Optional[int] = Field(default=None, primary_key=True)
-#     body: str
-#     created_at: datetime = Field(default_factory=datetime.utcnow)
-#     updated_at: datetime = Field(default_factory=datetime.utcnow)
-#     author_id: int | None = Field(default=None, foreign_key="users.id")
